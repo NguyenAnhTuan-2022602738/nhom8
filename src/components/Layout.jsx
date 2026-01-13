@@ -3,15 +3,15 @@ import Header from './Header';
 import Footer from './Footer';
 import FallingFlowers from '../FallingFlowers';
 
-const Layout = ({ children, settings, cartCount }) => {
+const Layout = ({ children, settings, cartCount, isAdmin, onLogout }) => {
   return (
     <div className="app-container">
       {settings.showFlowers && <FallingFlowers />}
-      <Header settings={settings} cartCount={cartCount} />
+      <Header settings={settings} cartCount={cartCount} isAdmin={isAdmin} onLogout={onLogout} />
       <main>
         {children}
       </main>
-      <Footer settings={settings} />
+      {/* Footer moved to individual pages for visual consistency with Home editor */}
     </div>
   );
 };

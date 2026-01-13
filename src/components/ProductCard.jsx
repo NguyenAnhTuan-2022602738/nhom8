@@ -23,7 +23,7 @@ const ProductCard = ({ product, settings, onOpenModal, onAddToCart, isEditing, o
   return (
     <div className="product-card" onClick={() => !isEditing && onOpenModal && onOpenModal(product)}>
       <div className="product-image-container">
-        <img src={product.image} alt={product.name} />
+        <img src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '')} alt={product.name} />
         {!isEditing && (
             <button 
               className="wishlist-btn" 

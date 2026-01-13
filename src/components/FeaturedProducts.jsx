@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { Link } from 'react-router-dom';
-import { Columns } from 'lucide-react';
+import { Columns, Plus } from 'lucide-react';
+import { api } from '../services/api';
 
 const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddToCart, isEditing, data, onUpdate }) => {
   // We use data.featuredIds to know WHICH products to show in this section.
@@ -25,21 +26,57 @@ const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddT
     .map(id => products.find(p => p.id === id))
     .filter(p => p !== undefined);
 
-  const handleProductUpdate = (updatedProduct) => {
-    // Update the GLOBAL products list
+  const handleProductUpdate = async (updatedProduct) => {
+    // Update local state first (Optimistic)
     const newProducts = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
     setProducts(newProducts);
+    
+    // Update DB
+    try {
+        await api.updateProduct(updatedProduct.id, updatedProduct);
+    } catch (e) {
+        console.error("Failed to update DB", e);
+    }
   };
 
-  const handleDuplicateProduct = (product) => {
+  const handleDuplicateProduct = async (product) => {
     const newId = Date.now();
-    const newProduct = { ...product, id: newId, name: `${product.name} (Copy)` };
+    const newProduct = { ...product, id: newId, _id: undefined, name: `${product.name} (Copy)` };
     
-    // 1. Add to global products
+    // Update local
     setProducts([...products, newProduct]);
-    
-    // 2. Add to this section's list
     onUpdate({ ...data, featuredIds: [...featuredIds, newId] });
+    
+    // Update DB
+    try {
+        await api.createProduct(newProduct);
+    } catch (e) {
+        console.error("Failed to create in DB", e);
+    }
+  };
+  
+  const handleAddProduct = async () => {
+    const newId = Date.now();
+    const newProduct = {
+        id: newId,
+        name: "Sản phẩm mới",
+        price: 0,
+        image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=300",
+        images: ["https://images.unsplash.com/photo-1563245372-f21724e3856d?w=300"],
+        description: "Mô tả sản phẩm mới...",
+        category: "Hoa Tươi"
+    };
+
+    // Update local
+    setProducts([...products, newProduct]);
+    onUpdate({ ...data, featuredIds: [...featuredIds, newId] });
+    
+    // Update DB
+    try {
+        await api.createProduct(newProduct);
+    } catch (e) {
+        console.error("Failed to create in DB", e);
+    }
   };
 
   const handleDeleteProduct = (productId) => {
@@ -48,13 +85,6 @@ const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddT
         onUpdate({ ...data, featuredIds: featuredIds.filter(id => id !== productId) });
     }
   };
-  
-  // Note: True deletion from DB wasn't requested, just "remove from here". 
-  // If user meant delete globally:
-  // const handleDeleteGlobal = (productId) => {
-  //    if(confirm...) setProducts(products.filter(p => p.id !== productId));
-  // }
-  // But usually home builder just manages display. Let's stick to "remove from view".
 
   const handleColumnChange = (cols) => {
     onUpdate({ ...data, columns: cols });
@@ -113,6 +143,32 @@ const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddT
                 onDelete={handleDeleteProduct}
               />
             ))}
+            
+            {isEditing && (
+                <div 
+                    onClick={handleAddProduct}
+                    style={{ 
+                        border: '2px dashed #ccc', 
+                        borderRadius: '24px', 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        minHeight: '400px', 
+                        cursor: 'pointer',
+                        color: '#999',
+                        transition: 'all 0.2s',
+                        background: 'rgba(255,255,255,0.5)'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = settings.primaryColor; e.currentTarget.style.color = settings.primaryColor; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#ccc'; e.currentTarget.style.color = '#999'; }}
+                >
+                    <div style={{ background: '#f5f5f5', borderRadius: '50%', padding: '20px', marginBottom: '15px' }}>
+                        <Plus size={40} />
+                    </div>
+                    <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>Thêm Sản Phẩm Mới</span>
+                </div>
+            )}
         </div>
         {!isEditing && (
             <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
@@ -124,3 +180,4 @@ const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddT
 };
 
 export default FeaturedProducts;
+
