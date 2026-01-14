@@ -1,11 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
+import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+
+const STATUS_CONFIG = {
+  pending: { label: 'Chờ xác nhận', color: '#ffc107', next: 'confirmed' },
+  confirmed: { label: 'Đã xác nhận', color: '#17a2b8', next: 'shipping' },
+  shipping: { label: 'Đang giao', color: '#007bff', next: 'delivered' },
+  delivered: { label: 'Đã giao', color: '#28a745', next: null },
+  cancelled: { label: 'Đã hủy', color: '#dc3545', next: null }
+};
 
 const Admin = ({ products, settings, setProducts }) => {
+  const [activeTab, setActiveTab] = useState('products'); // products | orders
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({ name: '', price: '', image: '', images: '', description: '' });
+  
+  // Orders state
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [expandedOrder, setExpandedOrder] = useState(null);
 
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      loadOrders();
+    }
+  }, [activeTab]);
+
+  const loadOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const data = await api.getOrders();
+      setOrders(data || []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await api.updateOrderStatus(orderId, newStatus);
+      setOrders(orders.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
+    } catch (err) {
+      console.error('Failed to update order:', err);
+      alert('Cập nhật thất bại!');
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const filteredOrders = statusFilter === 'all' 
+    ? orders 
+    : orders.filter(o => o.status === statusFilter);
+
+  const orderStats = {
+    total: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
+    confirmed: orders.filter(o => o.status === 'confirmed').length,
+    shipping: orders.filter(o => o.status === 'shipping').length,
+    delivered: orders.filter(o => o.status === 'delivered').length,
+    cancelled: orders.filter(o => o.status === 'cancelled').length
+  };
+
+  // Product handlers
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
@@ -26,7 +90,6 @@ const Admin = ({ products, settings, setProducts }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Process images textarea -> array
     const imageList = formData.images
         ? formData.images.split('\n').map(s => s.trim()).filter(s => s)
         : (formData.image ? [formData.image] : []);
@@ -34,19 +97,16 @@ const Admin = ({ products, settings, setProducts }) => {
     const productData = {
         ...formData,
         images: imageList,
-        // Ensure main image is set if not provided but list has items
         image: formData.image || (imageList.length > 0 ? imageList[0] : '')
     };
 
     if (editingProduct) {
-      // Update
       setProducts(products.map(p => p.id === editingProduct.id ? { ...productData, id: p.id } : p));
       setEditingProduct(null);
       try {
           await api.updateProduct(editingProduct.id, productData);
       } catch (e) { console.error("Update failed", e); }
     } else {
-      // Create
       const newProduct = { ...productData, id: Date.now() };
       setProducts([...products, newProduct]);
       try {
@@ -57,8 +117,67 @@ const Admin = ({ products, settings, setProducts }) => {
   };
 
   return (
-    <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       
+      {/* Header with Tabs */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ color: settings.primaryColor, marginBottom: '1rem', textAlign: 'center' }}>⚙️ Trang Quản Trị</h2>
+        
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1rem' }}>
+          <button
+            onClick={() => setActiveTab('products')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '25px',
+              border: activeTab === 'products' ? 'none' : '1px solid #ddd',
+              background: activeTab === 'products' ? settings.primaryColor : 'white',
+              color: activeTab === 'products' ? 'white' : '#666',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '600'
+            }}
+          >
+            <ShoppingBag size={18} /> Sản Phẩm ({products.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '25px',
+              border: activeTab === 'orders' ? 'none' : '1px solid #ddd',
+              background: activeTab === 'orders' ? settings.primaryColor : 'white',
+              color: activeTab === 'orders' ? 'white' : '#666',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '600',
+              position: 'relative'
+            }}
+          >
+            <Package size={18} /> Đơn Hàng ({orders.length})
+            {orderStats.pending > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                background: '#ff4d4f',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                fontSize: '0.7rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>{orderStats.pending}</span>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Quick Link to UI Editor */}
       <div style={{ 
           background: 'linear-gradient(135deg, #fff5f8 0%, #ffe0e6 100%)', 
@@ -67,7 +186,10 @@ const Admin = ({ products, settings, setProducts }) => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          boxShadow: '0 2px 10px rgba(201, 24, 74, 0.1)'
+          boxShadow: '0 2px 10px rgba(201, 24, 74, 0.1)',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
+          gap: '10px'
       }}>
           <div>
               <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#333' }}>🎨 Tùy Chỉnh Giao Diện</span>
@@ -92,93 +214,259 @@ const Admin = ({ products, settings, setProducts }) => {
           </Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-        <div className="glass-card" style={{ flex: 1, minWidth: '350px' }}>
-          <h2 style={{ textAlign: 'center', borderBottom: '2px solid pink', paddingBottom: '10px' }}>
-            {editingProduct ? '✏️ Sửa Sản Phẩm' : '✨ Thêm Sản Phẩm Mới'}
-          </h2>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div className="form-group">
-              <label>Tên loài hoa</label>
-              <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="Ví dụ: Hoa Hồng..." />
-            </div>
-            <div className="form-group">
-              <label>Giá bán (VNĐ)</label>
-              <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required placeholder="500000" />
-            </div>
-            <div className="form-group">
-              <label>Ảnh Chính (URL)</label>
-              <input value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} required placeholder="https://example.com/flower.jpg" />
-            </div>
-            <div className="form-group">
-              <label>Album Ảnh (Mỗi dòng 1 link)</label>
-              <textarea 
-                value={formData.images} 
-                onChange={e => setFormData({...formData, images: e.target.value})} 
-                rows="4" 
-                placeholder="https://img1.jpg&#10;https://img2.jpg" 
-                style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-              />
-            </div>
-            
-            {/* Live Preview Section */}
-            {(formData.image || formData.images) && (
-                <div style={{ marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '10px', border: '1px solid #eee' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#666' }}>Xem trước ảnh chính:</label>
-                    <div style={{ width: '100%', height: '150px', borderRadius: '8px', overflow: 'hidden', marginTop: '5px', background: '#ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {formData.image ? (
-                            <img 
-                                src={formData.image} 
-                                alt="Preview" 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerText = '⚠️ Link ảnh lỗi'; }}
-                            />
-                        ) : (
-                            <span style={{ color: '#999' }}>Chưa có link ảnh</span>
-                        )}
-                    </div>
-                </div>
-            )}
-            
-            <div className="form-group">
-              <label>Lời chúc / Mô tả</label>
-              <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3" placeholder="Môt tả vẻ đẹp..." />
-            </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editingProduct ? 'Cập nhật' : 'Thêm mới'}</button>
-              {editingProduct && (
-                <button type="button" onClick={() => { setEditingProduct(null); setFormData({ name: '', price: '', image: '', images: '', description: '' }); }} className="btn-danger" style={{ flex: 1, borderRadius: '30px' }}>Hủy</button>
+      {/* Products Tab */}
+      {activeTab === 'products' && (
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+          <div className="glass-card" style={{ flex: 1, minWidth: '350px' }}>
+            <h3 style={{ textAlign: 'center', borderBottom: '2px solid pink', paddingBottom: '10px', marginTop: 0 }}>
+              {editingProduct ? '✏️ Sửa Sản Phẩm' : '✨ Thêm Sản Phẩm Mới'}
+            </h3>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div className="form-group">
+                <label>Tên loài hoa</label>
+                <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="Ví dụ: Hoa Hồng..." />
+              </div>
+              <div className="form-group">
+                <label>Giá bán (VNĐ)</label>
+                <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required placeholder="500000" />
+              </div>
+              <div className="form-group">
+                <label>Ảnh Chính (URL)</label>
+                <input value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} required placeholder="https://example.com/flower.jpg" />
+              </div>
+              <div className="form-group">
+                <label>Album Ảnh (Mỗi dòng 1 link)</label>
+                <textarea 
+                  value={formData.images} 
+                  onChange={e => setFormData({...formData, images: e.target.value})} 
+                  rows="3" 
+                  placeholder={"https://img1.jpg\nhttps://img2.jpg"} 
+                  style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                />
+              </div>
+              
+              {formData.image && (
+                  <div style={{ padding: '10px', background: '#f9f9f9', borderRadius: '10px' }}>
+                      <small style={{ color: '#666' }}>Xem trước:</small>
+                      <div style={{ width: '100%', height: '120px', borderRadius: '8px', overflow: 'hidden', marginTop: '5px' }}>
+                          <img src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.src = 'https://via.placeholder.com/200?text=Image+Error'} />
+                      </div>
+                  </div>
               )}
-            </div>
-          </form>
-        </div>
+              
+              <div className="form-group">
+                <label>Mô tả</label>
+                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="2" placeholder="Mô tả vẻ đẹp..." />
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editingProduct ? 'Cập nhật' : 'Thêm mới'}</button>
+                {editingProduct && (
+                  <button type="button" onClick={() => { setEditingProduct(null); setFormData({ name: '', price: '', image: '', images: '', description: '' }); }} className="btn-danger" style={{ flex: 1, borderRadius: '30px' }}>Hủy</button>
+                )}
+              </div>
+            </form>
+          </div>
 
-        <div className="glass-card" style={{ flex: 2, minWidth: '350px' }}>
-          <h2 style={{ textAlign: 'center', borderBottom: '2px dashed pink', paddingBottom: '10px' }}>📦 Kho Hoa Hiện Tại</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '800px', overflowY: 'auto', paddingRight: '10px' }}>
-            {products.map(product => (
-              <div key={product.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', background: 'rgba(255,255,255,0.6)', borderRadius: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <img src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '')} alt={product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%', border: '2px solid white' }} />
-                  <div>
-                    <strong style={{ fontSize: '1.1rem' }}>{product.name}</strong><br/>
-                    <span style={{ fontWeight: 'bold' }}>{Number(product.price).toLocaleString('vi-VN')} đ</span>
-                    {product.images && product.images.length > 1 && (
-                        <span style={{ fontSize: '0.8rem', color: '#666', display: 'block' }}>📸 {product.images.length} ảnh</span>
-                    )}
+          <div className="glass-card" style={{ flex: 2, minWidth: '350px' }}>
+            <h3 style={{ textAlign: 'center', borderBottom: '2px dashed pink', paddingBottom: '10px', marginTop: 0 }}>📦 Kho Hoa ({products.length})</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '600px', overflowY: 'auto' }}>
+              {products.map(product => (
+                <div key={product.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.6)', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={product.image || product.images?.[0] || ''} alt={product.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '10px' }} />
+                    <div>
+                      <strong>{product.name}</strong><br/>
+                      <span style={{ fontWeight: 'bold', color: settings.primaryColor }}>{Number(product.price).toLocaleString('vi-VN')} đ</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <button onClick={() => handleEdit(product)} title="Sửa" style={{ width: '32px', height: '32px', borderRadius:'50%', border:'none', background:'white', cursor:'pointer' }}>✏️</button>
+                    <button onClick={() => handleDelete(product.id)} title="Xóa" style={{ width: '32px', height: '32px', borderRadius:'50%', border:'none', background:'#ff6b6b', color:'white', cursor:'pointer' }}>🗑️</button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <button onClick={() => handleEdit(product)} title="Sửa" style={{ width: '35px', height: '35px', borderRadius:'50%', border:'none', background:'white', cursor:'pointer', boxShadow:'0 2px 5px rgba(0,0,0,0.1)' }}>✏️</button>
-                  <button onClick={() => handleDelete(product.id)} title="Xóa" style={{ width: '35px', height: '35px', borderRadius:'50%', border:'none', background:'#ff6b6b', color:'white', cursor:'pointer', boxShadow:'0 2px 5px rgba(0,0,0,0.1)' }}>🗑️</button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Orders Tab */}
+      {activeTab === 'orders' && (
+        <div>
+          {/* Stats */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {[
+              { key: 'all', label: 'Tất cả', count: orderStats.total, color: '#666' },
+              { key: 'pending', label: 'Chờ xác nhận', count: orderStats.pending, color: '#ffc107' },
+              { key: 'confirmed', label: 'Đã xác nhận', count: orderStats.confirmed, color: '#17a2b8' },
+              { key: 'shipping', label: 'Đang giao', count: orderStats.shipping, color: '#007bff' },
+              { key: 'delivered', label: 'Hoàn thành', count: orderStats.delivered, color: '#28a745' },
+              { key: 'cancelled', label: 'Đã hủy', count: orderStats.cancelled, color: '#dc3545' }
+            ].map(item => (
+              <button
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: statusFilter === item.key ? `2px solid ${item.color}` : '1px solid #ddd',
+                  background: statusFilter === item.key ? `${item.color}15` : 'white',
+                  color: item.color,
+                  cursor: 'pointer',
+                  fontWeight: statusFilter === item.key ? '600' : '400',
+                  fontSize: '0.85rem'
+                }}
+              >
+                {item.label} ({item.count})
+              </button>
+            ))}
+            <button
+              onClick={loadOrders}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid #ddd',
+                background: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <RefreshCw size={14} /> Làm mới
+            </button>
+          </div>
+
+          {/* Orders List */}
+          {loadingOrders ? (
+            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+              <p>Đang tải đơn hàng...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+              <p>Không có đơn hàng nào</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {filteredOrders.map(order => {
+                const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                const isExpanded = expandedOrder === order._id;
+                
+                return (
+                  <div key={order._id} className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {/* Order Header */}
+                    <div
+                      onClick={() => setExpandedOrder(isExpanded ? null : order._id)}
+                      style={{
+                        padding: '1rem 1.25rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem',
+                        background: isExpanded ? '#fafafa' : 'transparent'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold' }}>#{order._id?.slice(-8)?.toUpperCase()}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#888' }}>{formatDate(order.createdAt)}</div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 'bold', color: settings.primaryColor }}>{order.totalAmount?.toLocaleString('vi-VN')} ₫</div>
+                          <div style={{ fontSize: '0.8rem', color: '#888' }}>{order.customer?.name}</div>
+                        </div>
+                        <span style={{
+                          background: `${status.color}20`,
+                          color: status.color,
+                          padding: '6px 12px',
+                          borderRadius: '15px',
+                          fontSize: '0.8rem',
+                          fontWeight: '600'
+                        }}>
+                          {status.label}
+                        </span>
+                        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid #eee' }}>
+                        {/* Customer Info */}
+                        <div style={{ padding: '1rem 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.9rem' }}>
+                          <div><strong>👤 Tên:</strong> {order.customer?.name}</div>
+                          <div><strong>📱 SĐT:</strong> {order.customer?.phone}</div>
+                          {order.customer?.email && <div><strong>📧 Email:</strong> {order.customer?.email}</div>}
+                          <div style={{ gridColumn: '1 / -1' }}><strong>📍 Địa chỉ:</strong> {order.customer?.address}</div>
+                          {order.customer?.note && <div style={{ gridColumn: '1 / -1', fontStyle: 'italic', color: '#666' }}><strong>📝 Ghi chú:</strong> {order.customer?.note}</div>}
+                        </div>
+
+                        {/* Items */}
+                        <div style={{ background: '#f8f9fa', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>🛒 Sản phẩm ({order.items?.length})</strong>
+                          <div style={{ marginTop: '0.75rem' }}>
+                            {order.items?.map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: idx < order.items.length - 1 ? '1px dashed #ddd' : 'none' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <img src={item.image} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
+                                  <span>{item.name} <span style={{ color: '#888' }}>x{item.quantity}</span></span>
+                                </div>
+                                <span style={{ fontWeight: '500' }}>{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          {status.next && (
+                            <button
+                              onClick={() => updateOrderStatus(order._id, status.next)}
+                              className="btn-primary"
+                              style={{ background: STATUS_CONFIG[status.next].color }}
+                            >
+                              ✅ Chuyển sang: {STATUS_CONFIG[status.next].label}
+                            </button>
+                          )}
+                          {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
+                                  updateOrderStatus(order._id, 'cancelled');
+                                }
+                              }}
+                              style={{
+                                padding: '10px 20px',
+                                borderRadius: '25px',
+                                border: '1px solid #dc3545',
+                                background: 'white',
+                                color: '#dc3545',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ❌ Hủy đơn
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default Admin;
+

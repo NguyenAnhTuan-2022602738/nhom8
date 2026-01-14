@@ -22,8 +22,38 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tuannguyen10112004:tua
 // Only connect if not already connected
 if (mongoose.connection.readyState === 0) {
     mongoose.connect(MONGO_URI)
-      .then(() => console.log('✅ Connected to MongoDB'))
+      .then(async () => {
+        console.log('✅ Connected to MongoDB');
+        // Create default admin if not exists
+        await createDefaultAdmin();
+      })
       .catch(err => console.error('❌ MongoDB Connection Error:', err));
+}
+
+// Function to create default admin
+async function createDefaultAdmin() {
+  try {
+    // Wait a bit for User model to be defined
+    setTimeout(async () => {
+      const User = mongoose.models.User;
+      if (!User) return;
+      
+      const adminExists = await User.findOne({ role: 'admin' });
+      if (!adminExists) {
+        const defaultAdmin = new User({
+          email: 'admin@shop.com',
+          password: Buffer.from('admin123').toString('base64'), // Password: admin123
+          name: 'Admin',
+          phone: '0909000000',
+          role: 'admin'
+        });
+        await defaultAdmin.save();
+        console.log('👤 Default admin created: admin@shop.com / admin123');
+      }
+    }, 1000);
+  } catch (err) {
+    console.log('Admin check skipped:', err.message);
+  }
 }
 
 // Schemas
@@ -42,13 +72,197 @@ const SettingsSchema = new mongoose.Schema({
   value: mongoose.Schema.Types.Mixed
 });
 
+const OrderSchema = new mongoose.Schema({
+  customer: {
+    name: String,
+    phone: String,
+    email: String,
+    address: String,
+    note: String
+  },
+  items: [{
+    productId: Number,
+    name: String,
+    price: Number,
+    quantity: Number,
+    image: String
+  }],
+  totalAmount: Number,
+  status: { type: String, default: 'pending' }, // pending, confirmed, shipping, delivered, cancelled
+  createdAt: { type: Date, default: Date.now }
+});
+
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: { type: String, required: true },
+  phone: { type: String },
+  address: { type: String },
+  role: { type: String, default: 'customer', enum: ['admin', 'customer'] },
+  createdAt: { type: Date, default: Date.now }
+});
+
 // Use models if already compiled to avoid overwriting error in serverless
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 const Setting = mongoose.models.Setting || mongoose.model('Setting', SettingsSchema);
+const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 // --- API Routes ---
 app.get('/api', (req, res) => {
     res.json({ message: "Hello from Flower Shop API 🌸" });
+});
+
+// ============ AUTH ROUTES ============
+
+// Register
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, phone } = req.body;
+    
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email đã được sử dụng' });
+    }
+    
+    // Simple password hash (in production, use bcrypt)
+    const hashedPassword = Buffer.from(password).toString('base64');
+    
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      name,
+      phone,
+      role: 'customer' // Default role
+    });
+    
+    await newUser.save();
+    
+    // Return user without password
+    const userResponse = { 
+      id: newUser._id, 
+      email: newUser.email, 
+      name: newUser.name, 
+      phone: newUser.phone,
+      role: newUser.role 
+    };
+    
+    res.json({ message: 'Đăng ký thành công', user: userResponse });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng' });
+    }
+    
+    // Check password
+    const hashedPassword = Buffer.from(password).toString('base64');
+    if (user.password !== hashedPassword) {
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng' });
+    }
+    
+    // Return user without password
+    const userResponse = { 
+      id: user._id, 
+      email: user.email, 
+      name: user.name, 
+      phone: user.phone,
+      address: user.address,
+      role: user.role 
+    };
+    
+    res.json({ message: 'Đăng nhập thành công', user: userResponse });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Profile
+app.put('/api/auth/profile/:id', async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    
+    const updated = await User.findByIdAndUpdate(
+      req.params.id,
+      { name, phone, address },
+      { new: true }
+    );
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    }
+    
+    const userResponse = { 
+      id: updated._id, 
+      email: updated.email, 
+      name: updated.name, 
+      phone: updated.phone,
+      address: updated.address,
+      role: updated.role 
+    };
+    
+    res.json({ message: 'Cập nhật thành công', user: userResponse });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Change Password
+app.put('/api/auth/password/:id', async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    }
+    
+    // Verify current password
+    const hashedCurrentPassword = Buffer.from(currentPassword).toString('base64');
+    if (user.password !== hashedCurrentPassword) {
+      return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
+    }
+    
+    // Update password
+    const hashedNewPassword = Buffer.from(newPassword).toString('base64');
+    user.password = hashedNewPassword;
+    await user.save();
+    
+    res.json({ message: 'Đổi mật khẩu thành công' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get User Orders (by email or phone)
+app.get('/api/auth/orders/:userId', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    }
+    
+    // Find orders by user's phone or email
+    const orders = await Order.find({
+      $or: [
+        { 'customer.phone': user.phone },
+        { 'customer.email': user.email }
+      ]
+    }).sort({ createdAt: -1 });
+    
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 1. Products
@@ -108,6 +322,50 @@ app.post('/api/settings', async (req, res) => {
       { upsert: true, new: true }
     );
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Orders
+app.get('/api/orders', async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const newOrder = new Order(req.body);
+    await newOrder.save();
+    console.log('📦 New order created:', newOrder._id);
+    res.json(newOrder);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/orders/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const updated = await Order.findByIdAndUpdate(
+      req.params.id, 
+      { status }, 
+      { new: true }
+    );
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Order deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

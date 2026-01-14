@@ -1,32 +1,55 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Phone } from 'lucide-react';
 import { api } from '../services/api';
 
-const Login = ({ onLogin, settings }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const Register = ({ settings, onLogin }) => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validate
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const result = await api.login(email, password);
-      
+      const result = await api.register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password
+      });
+
+      // Auto login after register
       if (result.user) {
         onLogin(result.user);
-        
-        // Redirect based on role
-        if (result.user.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/profile');
-        }
+        navigate('/');
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Đã xảy ra lỗi, vui lòng thử lại');
@@ -44,7 +67,7 @@ const Login = ({ onLogin, settings }) => {
       padding: '2rem'
     }}>
       <div className="glass-card" style={{ 
-        maxWidth: '420px', 
+        maxWidth: '450px', 
         width: '100%', 
         padding: '2.5rem'
       }}>
@@ -59,10 +82,10 @@ const Login = ({ onLogin, settings }) => {
             justifyContent: 'center',
             margin: '0 auto 1rem'
           }}>
-            <LogIn size={32} color="white" />
+            <UserPlus size={32} color="white" />
           </div>
-          <h2 style={{ color: settings.primaryColor, margin: 0 }}>Đăng Nhập</h2>
-          <p style={{ color: '#888', marginTop: '0.5rem' }}>Chào mừng bạn trở lại!</p>
+          <h2 style={{ color: settings.primaryColor, margin: 0 }}>Đăng Ký Tài Khoản</h2>
+          <p style={{ color: '#888', marginTop: '0.5rem' }}>Tạo tài khoản để mua sắm dễ dàng hơn</p>
         </div>
 
         {error && (
@@ -82,12 +105,27 @@ const Login = ({ onLogin, settings }) => {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Mail size={16} /> Email
+              <User size={16} /> Họ và tên *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Nguyễn Văn A"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Mail size={16} /> Email *
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="email@example.com"
               required
             />
@@ -95,13 +133,42 @@ const Login = ({ onLogin, settings }) => {
 
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Lock size={16} /> Mật khẩu
+              <Phone size={16} /> Số điện thoại
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="0909 123 456"
+            />
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock size={16} /> Mật khẩu *
             </label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              placeholder="••••••••"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Ít nhất 6 ký tự"
+              required
+              minLength={6}
+            />
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock size={16} /> Xác nhận mật khẩu *
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Nhập lại mật khẩu"
               required
             />
           </div>
@@ -136,7 +203,7 @@ const Login = ({ onLogin, settings }) => {
               </>
             ) : (
               <>
-                <LogIn size={18} /> Đăng Nhập
+                <UserPlus size={18} /> Đăng Ký
               </>
             )}
           </button>
@@ -149,9 +216,9 @@ const Login = ({ onLogin, settings }) => {
           borderTop: '1px solid #eee' 
         }}>
           <p style={{ margin: 0, color: '#666' }}>
-            Chưa có tài khoản?{' '}
-            <Link to="/register" style={{ color: settings.primaryColor, fontWeight: '600' }}>
-              Đăng ký ngay
+            Đã có tài khoản?{' '}
+            <Link to="/login" style={{ color: settings.primaryColor, fontWeight: '600' }}>
+              Đăng nhập ngay
             </Link>
           </p>
         </div>
@@ -160,5 +227,4 @@ const Login = ({ onLogin, settings }) => {
   );
 };
 
-export default Login;
-
+export default Register;

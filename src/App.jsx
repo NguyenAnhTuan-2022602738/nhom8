@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProductModal from './components/ProductModal';
+import Toast from './components/Toast';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import Admin from './pages/Admin';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Cart from './pages/Cart';
+import Orders from './pages/Orders';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
 import { api } from './services/api';
 import './index.css';
 
@@ -53,13 +57,29 @@ function App() {
   
   const [cartItems, setCartItems] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [toast, setToast] = useState(null);
   
-  // Auth State
-  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('isAdmin') === 'true');
+  // Auth State - User object with role
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const isAdmin = user?.role === 'admin';
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
 
   const handleLogout = () => {
-    setIsAdmin(false);
-    localStorage.removeItem('isAdmin');
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const handleUpdateUser = (newUserData) => {
+    setUser(newUserData);
+    localStorage.setItem('user', JSON.stringify(newUserData));
   };
 
   // Load Data from MongoDB - OPTIMIZED: Single call for homeLayoutV2 + parallel for products
@@ -124,6 +144,26 @@ function App() {
       }
       return [...prev, { ...product, quantity }];
     });
+    // Hiển thị toast thông báo
+    setToast({ message: `Đã thêm "${product.name}" vào giỏ hàng!`, type: 'success' });
+  };
+
+  const updateCartQuantity = (productId, newQuantity) => {
+    if (newQuantity < 1) {
+      removeFromCart(productId);
+      return;
+    }
+    setCartItems(prev => 
+      prev.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item)
+    );
+  };
+
+  const removeFromCart = (productId) => {
+    setCartItems(prev => prev.filter(item => item.id !== productId));
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
   };
 
   const handleOpenModal = (product) => setSelectedProduct(product);
@@ -149,7 +189,7 @@ function App() {
 
   return (
     <Router>
-      <Layout settings={settings} isAdmin={isAdmin} onLogout={handleLogout} cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}>
+      <Layout settings={settings} user={user} isAdmin={isAdmin} onLogout={handleLogout} cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}>
         <Routes>
           <Route path="/" element={
             <Home 
@@ -165,8 +205,38 @@ function App() {
           <Route path="/shop" element={<Shop products={products} settings={settings} onOpenModal={handleOpenModal} onAddToCart={addToCart} />} />
           <Route path="/about" element={<About settings={settings} isAdmin={isAdmin} />} />
           <Route path="/contact" element={<Contact settings={settings} />} />
-          <Route path="/cart" element={<Cart settings={settings} cartItems={cartItems} />} />
-          <Route path="/login" element={<Login setIsAdmin={setIsAdmin} settings={settings} />} />
+          <Route path="/cart" element={
+            <Cart 
+              settings={settings} 
+              cartItems={cartItems} 
+              user={user}
+              onUpdateQuantity={updateCartQuantity}
+              onRemoveItem={removeFromCart}
+              onClearCart={clearCart}
+            />
+          } />
+          <Route path="/login" element={
+            user ? (
+              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
+            ) : (
+              <Login onLogin={handleLogin} settings={settings} />
+            )
+          } />
+          <Route path="/register" element={
+            user ? (
+              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
+            ) : (
+              <Register settings={settings} onLogin={handleLogin} />
+            )
+          } />
+          <Route path="/profile" element={
+            user ? (
+              <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
+            ) : (
+              <Login onLogin={handleLogin} settings={settings} />
+            )
+          } />
+          <Route path="/orders" element={<Orders settings={settings} user={user} />} />
           <Route path="/admin" element={
             isAdmin ? (
               <Admin 
@@ -175,7 +245,7 @@ function App() {
                 settings={settings}
               />
             ) : (
-             <Login setIsAdmin={setIsAdmin} settings={settings} />
+              <Login onLogin={handleLogin} settings={settings} />
             )
           } />
         </Routes>
@@ -194,6 +264,15 @@ function App() {
           />
         )}
       </Layout>
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </Router>
   );
 }

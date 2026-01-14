@@ -3,11 +3,11 @@ import Header from './Header';
 import Footer from './Footer';
 import FallingFlowers from '../FallingFlowers';
 
-const Layout = ({ children, settings, cartCount, isAdmin, onLogout }) => {
+const Layout = ({ children, settings, cartCount, user, isAdmin, onLogout }) => {
   return (
     <div className="app-container">
       {settings.showFlowers && <FallingFlowers />}
-      <Header settings={settings} cartCount={cartCount} isAdmin={isAdmin} onLogout={onLogout} />
+      <Header settings={settings} cartCount={cartCount} user={user} isAdmin={isAdmin} onLogout={onLogout} />
       <main>
         {children}
       </main>

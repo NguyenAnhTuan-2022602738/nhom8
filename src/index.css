@@ -234,6 +234,17 @@ h1, h2, h3 {
   100% { transform: rotate(360deg); }
 }
 
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .animate-float {
   /* Removed gentle float for product cards to make them look more grounded and professional by default, 
      or can be applied to specific elements */

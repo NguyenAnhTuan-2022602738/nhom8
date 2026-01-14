@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Settings, UserCircle } from 'lucide-react';
 
-const Header = ({ settings, cartCount, isAdmin, onLogout }) => {
+const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = () => {
@@ -23,6 +23,7 @@ const Header = ({ settings, cartCount, isAdmin, onLogout }) => {
           <div className="nav-links" style={{ marginRight: '2rem' }}>
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Trang Chủ</NavLink>
             <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Cửa Hàng</NavLink>
+            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Đơn Hàng</NavLink>
             <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Về Chúng Tôi</NavLink>
             <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Liên Hệ</NavLink>
           </div>
@@ -37,17 +38,26 @@ const Header = ({ settings, cartCount, isAdmin, onLogout }) => {
                )}
             </NavLink>
             
-            {isAdmin ? (
+            {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <NavLink to="/admin" title="Trang Quản Trị" style={{ color: settings.primaryColor }}>
-                      <User size={24} />
-                  </NavLink>
-                  <button onClick={onLogout} className="logout-btn-desktop" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.8rem', color: '#666', textDecoration: 'underline' }}>
+                  {isAdmin ? (
+                    <NavLink to="/admin" title="Trang Quản Trị" style={{ color: settings.primaryColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Settings size={22} />
+                    </NavLink>
+                  ) : (
+                    <NavLink to="/profile" title="Tài khoản" style={{ color: settings.primaryColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <UserCircle size={24} />
+                    </NavLink>
+                  )}
+                  <span className="logout-btn-desktop" style={{ fontSize: '0.8rem', color: '#666', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.name?.split(' ').pop()}
+                  </span>
+                  <button onClick={onLogout} className="logout-btn-desktop" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.8rem', color: '#888', textDecoration: 'underline' }}>
                       Thoát
                   </button>
               </div>
             ) : (
-              <NavLink to="/login" title="Đăng Nhập Quản Lý" className="login-link-desktop">
+              <NavLink to="/login" title="Đăng Nhập" className="login-link-desktop">
                   <User size={24} color="#aaa" />
               </NavLink>
             )}
@@ -89,16 +99,24 @@ const Header = ({ settings, cartCount, isAdmin, onLogout }) => {
         }}>
           <NavLink to="/" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>🏠 Trang Chủ</NavLink>
           <NavLink to="/shop" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>🛒 Cửa Hàng</NavLink>
+          <NavLink to="/orders" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>📦 Đơn Hàng</NavLink>
           <NavLink to="/about" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>💐 Về Chúng Tôi</NavLink>
           <NavLink to="/contact" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>📞 Liên Hệ</NavLink>
           
-          {isAdmin ? (
+          {user ? (
             <>
-              <NavLink to="/admin" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'white', background: settings.primaryColor }}>⚙️ Quản Trị</NavLink>
+              {isAdmin ? (
+                <NavLink to="/admin" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'white', background: settings.primaryColor }}>⚙️ Quản Trị</NavLink>
+              ) : (
+                <NavLink to="/profile" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'white', background: settings.primaryColor }}>👤 Tài Khoản ({user.name})</NavLink>
+              )}
               <button onClick={() => { onLogout(); handleNavClick(); }} style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', textAlign: 'left' }}>🚪 Đăng Xuất</button>
             </>
           ) : (
-            <NavLink to="/login" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'white', background: settings.primaryColor }}>🔐 Đăng Nhập</NavLink>
+            <>
+              <NavLink to="/login" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'white', background: settings.primaryColor }}>🔐 Đăng Nhập</NavLink>
+              <NavLink to="/register" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: settings.primaryColor, background: '#fff', border: `1px solid ${settings.primaryColor}` }}>📝 Đăng Ký</NavLink>
+            </>
           )}
         </div>
       )}
@@ -107,3 +125,4 @@ const Header = ({ settings, cartCount, isAdmin, onLogout }) => {
 };
 
 export default Header;
+
