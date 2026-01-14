@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp, BookOpen, CheckCircle, Circle, ArrowRight } from 'lucide-react';
 
 const STATUS_CONFIG = {
   pending: { label: 'Chờ xác nhận', color: '#ffc107', next: 'confirmed' },
@@ -174,6 +174,23 @@ const Admin = ({ products, settings, setProducts }) => {
                 justifyContent: 'center'
               }}>{orderStats.pending}</span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('guide')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '25px',
+              border: activeTab === 'guide' ? 'none' : '1px solid #ddd',
+              background: activeTab === 'guide' ? settings.primaryColor : 'white',
+              color: activeTab === 'guide' ? 'white' : '#666',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '600'
+            }}
+          >
+            <BookOpen size={18} /> Hướng Dẫn
           </button>
         </div>
       </div>
@@ -462,6 +479,233 @@ const Admin = ({ products, settings, setProducts }) => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Guide Tab - Hướng dẫn giống WordPress */}
+      {activeTab === 'guide' && (
+        <div>
+          {/* Header */}
+          <div className="glass-card" style={{ padding: '2rem', marginBottom: '1.5rem', textAlign: 'center', background: 'linear-gradient(135deg, #fff5f8 0%, #ffe0e6 100%)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌸</div>
+            <h2 style={{ color: settings.primaryColor, marginBottom: '0.5rem' }}>Chào mừng đến với Hệ thống quản lý Shop Hoa!</h2>
+            <p style={{ color: '#666', maxWidth: '600px', margin: '0 auto' }}>
+              Hướng dẫn từng bước giúp bạn thiết lập và quản lý cửa hàng hoa trực tuyến của mình.
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Step 1 */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: settings.primaryColor, 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>1</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>🏪 Thiết lập thông tin cửa hàng</h3>
+                  <p style={{ color: '#666', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+                    Đầu tiên, bạn cần thiết lập các thông tin cơ bản cho cửa hàng:
+                  </p>
+                  <ul style={{ color: '#555', paddingLeft: '1.5rem', lineHeight: 2 }}>
+                    <li><strong>Tên cửa hàng:</strong> Đặt tên cho shop của bạn</li>
+                    <li><strong>Màu chủ đạo:</strong> Chọn màu theme phù hợp với thương hiệu</li>
+                    <li><strong>Hiệu ứng hoa rơi:</strong> Bật/tắt animation hoa rơi trên trang</li>
+                  </ul>
+                  <Link to="/">
+                    <button className="btn-primary" style={{ background: settings.primaryColor, marginTop: '0.5rem' }}>
+                      <ArrowRight size={16} style={{ marginRight: '5px' }} /> Đi đến trang chủ để thiết lập
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: settings.primaryColor, 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>2</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>🌷 Thêm sản phẩm hoa</h3>
+                  <p style={{ color: '#666', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+                    Thêm các sản phẩm hoa vào cửa hàng của bạn:
+                  </p>
+                  <ul style={{ color: '#555', paddingLeft: '1.5rem', lineHeight: 2 }}>
+                    <li><strong>Tên sản phẩm:</strong> VD: Hoa Hồng Đỏ, Bó Hoa Cưới...</li>
+                    <li><strong>Giá bán:</strong> Đơn giá tính bằng VNĐ</li>
+                    <li><strong>Hình ảnh:</strong> URL hình ảnh sản phẩm (có thể thêm nhiều ảnh)</li>
+                    <li><strong>Mô tả:</strong> Giới thiệu về sản phẩm, ý nghĩa hoa</li>
+                  </ul>
+                  <button onClick={() => setActiveTab('products')} className="btn-primary" style={{ background: settings.primaryColor, marginTop: '0.5rem' }}>
+                    <ArrowRight size={16} style={{ marginRight: '5px' }} /> Quản lý sản phẩm
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: settings.primaryColor, 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>3</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>🎨 Tùy chỉnh giao diện trang chủ</h3>
+                  <p style={{ color: '#666', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+                    Thiết kế trang chủ theo phong cách của bạn với <strong>Edit Mode</strong>:
+                  </p>
+                  <ul style={{ color: '#555', paddingLeft: '1.5rem', lineHeight: 2 }}>
+                    <li><strong>Hero Banner:</strong> Thay đổi hình nền, tiêu đề, slogan</li>
+                    <li><strong>Sản phẩm nổi bật:</strong> Chọn các sản phẩm hiển thị</li>
+                    <li><strong>Các section:</strong> Ẩn/hiện, sắp xếp thứ tự các phần</li>
+                    <li><strong>Footer:</strong> Thông tin liên hệ, mạng xã hội</li>
+                  </ul>
+                  <p style={{ color: '#888', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
+                    💡 Vào Trang chủ → Bật "Chế độ chỉnh sửa" ở góc phải màn hình
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: settings.primaryColor, 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>4</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>📦 Quản lý đơn hàng</h3>
+                  <p style={{ color: '#666', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+                    Theo dõi và xử lý các đơn hàng từ khách hàng:
+                  </p>
+                  <ul style={{ color: '#555', paddingLeft: '1.5rem', lineHeight: 2 }}>
+                    <li><strong>Chờ xác nhận:</strong> Đơn hàng mới cần xử lý</li>
+                    <li><strong>Đã xác nhận:</strong> Đơn đã được duyệt, chuẩn bị hàng</li>
+                    <li><strong>Đang giao:</strong> Đơn đang trên đường vận chuyển</li>
+                    <li><strong>Đã giao:</strong> Hoàn thành đơn hàng</li>
+                    <li><strong>Đã hủy:</strong> Đơn bị hủy bởi shop hoặc khách</li>
+                  </ul>
+                  <button onClick={() => setActiveTab('orders')} className="btn-primary" style={{ background: settings.primaryColor, marginTop: '0.5rem' }}>
+                    <ArrowRight size={16} style={{ marginRight: '5px' }} /> Xem đơn hàng
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: settings.primaryColor, 
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>5</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>👥 Quản lý tài khoản</h3>
+                  <p style={{ color: '#666', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+                    Hệ thống hỗ trợ 2 loại tài khoản:
+                  </p>
+                  <ul style={{ color: '#555', paddingLeft: '1.5rem', lineHeight: 2 }}>
+                    <li><strong>Admin:</strong> Quản lý toàn bộ hệ thống, sản phẩm, đơn hàng, giao diện</li>
+                    <li><strong>Customer:</strong> Khách hàng đăng ký, đặt hàng, xem lịch sử đơn</li>
+                  </ul>
+                  <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '10px', marginTop: '0.5rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>
+                      <strong>🔐 Tài khoản Admin mặc định:</strong><br/>
+                      Email: <code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>admin@shop.com</code><br/>
+                      Mật khẩu: <code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>admin123</code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="glass-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' }}>
+              <h3 style={{ margin: '0 0 1rem 0', color: '#2e7d32' }}>💡 Mẹo sử dụng</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <strong style={{ color: '#1b5e20' }}>Hình ảnh sản phẩm:</strong>
+                  <p style={{ color: '#555', margin: '0.3rem 0 0 0', fontSize: '0.9rem' }}>
+                    Sử dụng link ảnh từ Unsplash, Imgur hoặc upload lên hosting riêng
+                  </p>
+                </div>
+                <div>
+                  <strong style={{ color: '#1b5e20' }}>Backup dữ liệu:</strong>
+                  <p style={{ color: '#555', margin: '0.3rem 0 0 0', fontSize: '0.9rem' }}>
+                    Dữ liệu được lưu trữ trên MongoDB Atlas, an toàn và bền vững
+                  </p>
+                </div>
+                <div>
+                  <strong style={{ color: '#1b5e20' }}>Responsive:</strong>
+                  <p style={{ color: '#555', margin: '0.3rem 0 0 0', fontSize: '0.9rem' }}>
+                    Website tự động điều chỉnh cho mobile, tablet và desktop
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tech Stack */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>🛠️ Công nghệ sử dụng</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {['React.js', 'Vite', 'Node.js', 'Express', 'MongoDB', 'Mongoose', 'Lucide Icons', 'CSS3'].map(tech => (
+                  <span key={tech} style={{ 
+                    background: '#f0f0f0', 
+                    padding: '8px 16px', 
+                    borderRadius: '20px',
+                    fontSize: '0.9rem',
+                    color: '#555'
+                  }}>{tech}</span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
