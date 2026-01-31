@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Settings, UserCircle } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Settings, UserCircle, ChevronDown } from 'lucide-react';
 
 const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
+    setDropdownOpen(false);
   };
 
   return (
@@ -20,11 +35,125 @@ const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
 
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {/* Desktop Nav Links */}
-          <div className="nav-links" style={{ marginRight: '2rem' }}>
+          <div className="nav-links" style={{ marginRight: '2rem', display: 'flex', alignItems: 'center', gap: '15px' }}>
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Trang Chủ</NavLink>
             <NavLink to="/shop" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Cửa Hàng</NavLink>
+            
+            {/* Dropdown Menu */}
+            <div 
+              ref={dropdownRef}
+              style={{ position: 'relative' }}
+              onMouseEnter={() => setDropdownOpen(true)}
+              onMouseLeave={() => setDropdownOpen(false)}
+            >
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-dark)',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontWeight: '500',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={(e) => e.target.style.color = settings.primaryColor}
+                onMouseLeave={(e) => e.target.style.color = 'var(--text-dark)'}
+              >
+                Khám Phá
+                <ChevronDown 
+                  size={16} 
+                  style={{ 
+                    transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s'
+                  }} 
+                />
+              </button>
+
+              {dropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '10px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  padding: '8px 0',
+                  minWidth: '180px',
+                  zIndex: 1000,
+                  marginTop: '5px'
+                }}>
+                  <NavLink 
+                    to="/faq" 
+                    onClick={handleNavClick}
+                    style={{
+                      display: 'block',
+                      padding: '10px 20px',
+                      color: 'var(--text-dark)',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = `${settings.primaryColor}15`;
+                      e.target.style.color = settings.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'transparent';
+                      e.target.style.color = 'var(--text-dark)';
+                    }}
+                  >
+                    ❓ FAQ
+                  </NavLink>
+                  <NavLink 
+                    to="/promotions" 
+                    onClick={handleNavClick}
+                    style={{
+                      display: 'block',
+                      padding: '10px 20px',
+                      color: 'var(--text-dark)',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = `${settings.primaryColor}15`;
+                      e.target.style.color = settings.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'transparent';
+                      e.target.style.color = 'var(--text-dark)';
+                    }}
+                  >
+                    🎁 Khuyến Mãi
+                  </NavLink>
+                  <NavLink 
+                    to="/reviews" 
+                    onClick={handleNavClick}
+                    style={{
+                      display: 'block',
+                      padding: '10px 20px',
+                      color: 'var(--text-dark)',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = `${settings.primaryColor}15`;
+                      e.target.style.color = settings.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'transparent';
+                      e.target.style.color = 'var(--text-dark)';
+                    }}
+                  >
+                    ⭐ Đánh Giá
+                  </NavLink>
+                </div>
+              )}
+            </div>
+
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Đơn Hàng</NavLink>
-            <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Về Chúng Tôi</NavLink>
             <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>Liên Hệ</NavLink>
           </div>
           
@@ -99,8 +228,14 @@ const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
         }}>
           <NavLink to="/" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>🏠 Trang Chủ</NavLink>
           <NavLink to="/shop" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>🛒 Cửa Hàng</NavLink>
+          
+          {/* Khám Phá Group */}
+          <div style={{ padding: '8px 15px', fontSize: '0.85rem', color: '#999', fontWeight: '600' }}>KHÁM PHÁ</div>
+          <NavLink to="/faq" onClick={handleNavClick} style={{ padding: '10px 15px 10px 25px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>❓ FAQ</NavLink>
+          <NavLink to="/promotions" onClick={handleNavClick} style={{ padding: '10px 15px 10px 25px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>🎁 Khuyến Mãi</NavLink>
+          <NavLink to="/reviews" onClick={handleNavClick} style={{ padding: '10px 15px 10px 25px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>⭐ Đánh Giá</NavLink>
+          
           <NavLink to="/orders" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>📦 Đơn Hàng</NavLink>
-          <NavLink to="/about" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>💐 Về Chúng Tôi</NavLink>
           <NavLink to="/contact" onClick={handleNavClick} style={{ padding: '10px 15px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-dark)', background: '#f8f9fa' }}>📞 Liên Hệ</NavLink>
           
           {user ? (

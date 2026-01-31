@@ -13,6 +13,10 @@ import Orders from './pages/Orders';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import FAQ from './pages/FAQ';
+import Promotions from './pages/Promotions';
+import Reviews from './pages/Reviews';
+import ChatWidget from './components/ChatWidget';
 import { api } from './services/api';
 import './index.css';
 
@@ -237,6 +241,9 @@ function App() {
             )
           } />
           <Route path="/orders" element={<Orders settings={settings} user={user} />} />
+          <Route path="/faq" element={<FAQ settings={settings} isAdmin={isAdmin} />} />
+          <Route path="/promotions" element={<Promotions settings={settings} isAdmin={isAdmin} />} />
+          <Route path="/reviews" element={<Reviews settings={settings} isAdmin={isAdmin} />} />
           <Route path="/admin" element={
             isAdmin ? (
               <Admin 
@@ -273,6 +280,9 @@ function App() {
           onClose={() => setToast(null)} 
         />
       )}
+      
+      {/* Chat Widget */}
+      <ChatWidget settings={settings} user={user} />
     </Router>
   );
 }

@@ -33,6 +33,15 @@ export const api = {
     await axios.post(`${API_URL}/settings`, { key, value });
   },
 
+  getAllSettings: async () => {
+    const res = await axios.get(`${API_URL}/settings`);
+    return res.data;
+  },
+
+  deleteSetting: async (key) => {
+    await axios.delete(`${API_URL}/settings/${key}`);
+  },
+
   // Orders
   createOrder: async (orderData) => {
     const res = await axios.post(`${API_URL}/orders`, orderData);

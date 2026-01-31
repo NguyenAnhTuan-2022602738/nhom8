@@ -1,0 +1,136 @@
+/* Mobile responsive styles for admin and new features */
+
+/* Tablet Styles */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .admin-chat-sessions {
+    width: 280px !important;
+  }
+
+  .faq-container {
+    padding: 2.5rem 1.5rem !important;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  /* Admin Chat Management */
+  .admin-chat-container {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+
+  .admin-chat-sessions {
+    width: 100% !important;
+    max-height: 300px !important;
+    margin-bottom: 15px;
+  }
+
+  .admin-chat-window {
+    width: 100% !important;
+    height: 400px !important;
+  }
+
+  /* FAQ Page */
+  .faq-container {
+    padding: 1.5rem 1rem !important;
+  }
+
+  .faq-item {
+    font-size: 0.9rem;
+  }
+
+  /* Promotions */
+  .promotion-card {
+    padding: 20px !important;
+  }
+
+  .promotion-title {
+    font-size: 1.3rem !important;
+  }
+
+  /* Reviews */
+  .review-form {
+    padding: 1.5rem !important;
+  }
+
+  .review-card {
+    padding: 15px !important;
+  }
+
+  .review-stats {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* Admin Page Tabs */
+  .admin-tabs {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .admin-tab-button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Product Grid */
+  .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Glass Cards */
+  .glass-card {
+    padding: 1rem !important;
+  }
+
+  /* Form Groups */
+  .form-group {
+    margin-bottom: 12px !important;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  /* Typography */
+  .section-title {
+    font-size: 1.8rem !important;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    padding: 12px 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small devices */
+  .section-title {
+    font-size: 1.5rem !important;
+  }
+
+  .btn-primary {
+    padding: 10px 16px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Chat Widget Button */
+  .chat-widget-button {
+    width: 50px !important;
+    height: 50px !important;
+    bottom: 15px !important;
+    right: 15px !important;
+  }
+
+  /* Smaller text */
+  p {
+    font-size: 0.95rem;
+  }
+
+  /* Compact spacing */
+  .faq-container,
+  .review-stats {
+    padding: 1rem 0.75rem !important;
+  }
+}

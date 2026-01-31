@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp, BookOpen, CheckCircle, Circle, ArrowRight } from 'lucide-react';
+import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp, BookOpen, CheckCircle, Circle, ArrowRight, MessageCircle } from 'lucide-react';
+import AdminChatManagement from '../components/AdminChatManagement';
 
 const STATUS_CONFIG = {
   pending: { label: 'Chờ xác nhận', color: '#ffc107', next: 'confirmed' },
@@ -12,7 +13,7 @@ const STATUS_CONFIG = {
 };
 
 const Admin = ({ products, settings, setProducts }) => {
-  const [activeTab, setActiveTab] = useState('products'); // products | orders
+  const [activeTab, setActiveTab] = useState('products'); // products | orders | chats
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({ name: '', price: '', image: '', images: '', description: '' });
   
@@ -176,6 +177,23 @@ const Admin = ({ products, settings, setProducts }) => {
             )}
           </button>
           <button
+            onClick={() => setActiveTab('chats')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '25px',
+              border: activeTab === 'chats' ? 'none' : '1px solid #ddd',
+              background: activeTab === 'chats' ? settings.primaryColor : 'white',
+              color: activeTab === 'chats' ? 'white' : '#666',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '600'
+            }}
+          >
+            <MessageCircle size={18} /> Tin Nhắn
+          </button>
+          <button
             onClick={() => setActiveTab('guide')}
             style={{
               padding: '12px 24px',
@@ -305,6 +323,11 @@ const Admin = ({ products, settings, setProducts }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Messages*/}
+      {activeTab === 'chats' && (
+        <AdminChatManagement settings={settings} />
       )}
 
       {/* Orders Tab */}

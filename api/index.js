@@ -1,4 +1,6 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -6,6 +8,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -327,6 +336,30 @@ app.post('/api/settings', async (req, res) => {
   }
 });
 
+// Get all settings
+app.get('/api/settings', async (req, res) => {
+  try {
+    const allSettings = await Setting.find();
+    const settingsMap = {};
+    allSettings.forEach(s => {
+      settingsMap[s.key] = s.value;
+    });
+    res.json(settingsMap);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete setting
+app.delete('/api/settings/:key', async (req, res) => {
+  try {
+    await Setting.deleteOne({ key: req.params.key });
+    res.json({ message: 'Setting deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 3. Orders
 app.get('/api/orders', async (req, res) => {
   try {
@@ -376,10 +409,38 @@ app.delete('/api/orders/:id', async (req, res) => {
 // In ESM, import.meta.url is the file URL. process.argv[1] is the script path.
 // Doing a loose check or simply trying to listen if PORT is defined and not serverless environment.
 if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
         console.log(`🚀 Server running locally on http://localhost:${PORT}`);
+        console.log(`💬 Socket.IO ready for real-time chat`);
     });
 }
+
+// Socket.IO Chat Events
+io.on('connection', (socket) => {
+  console.log('👤 User connected:', socket.id);
+
+  // Join specific chat session
+  socket.on('join-session', (sessionId) => {
+    socket.join(sessionId);
+    console.log(`📥 User ${socket.id} joined session: ${sessionId}`);
+  });
+
+  // Send message
+  socket.on('send-message', ({ sessionId, message }) => {
+    // Broadcast to all users in this session (including sender)
+    io.to(sessionId).emit('new-message', message);
+    console.log(`💬 Message in session ${sessionId}:`, message.message);
+  });
+
+  // Admin typing indicator (optional)
+  socket.on('typing', ({ sessionId, isTyping }) => {
+    socket.to(sessionId).emit('user-typing', { isTyping });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('👋 User disconnected:', socket.id);
+  });
+});
 
 // Export for Vercel Serverless
 export default app;
