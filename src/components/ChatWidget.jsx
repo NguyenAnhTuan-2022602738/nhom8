@@ -17,10 +17,14 @@ const ChatWidget = ({ settings, user }) => {
 
   // Initialize session
   useEffect(() => {
-    let sid = localStorage.getItem('chatSessionId');
+    // Create session ID based on user (if logged in) or browser session (if guest)
+    const userIdentifier = user?.email || user?.id || 'guest';
+    const storageKey = `chatSessionId-${userIdentifier}`;
+    
+    let sid = localStorage.getItem(storageKey);
     if (!sid) {
-      sid = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('chatSessionId', sid);
+      sid = `session-${userIdentifier}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(storageKey, sid);
     }
     setSessionId(sid);
     loadMessages(sid);
@@ -53,7 +57,7 @@ const ChatWidget = ({ settings, user }) => {
         socketRef.current.disconnect();
       }
     };
-  }, []);
+  }, [user]);
 
   // Auto-scroll to bottom
   useEffect(() => {
