@@ -135,7 +135,7 @@ const Promotions = ({ settings, isAdmin }) => {
             gap: '25px',
             marginBottom: '3rem'
           }}>
-            {promotions.filter(p => p.isActive).map(promotion => (
+            {promotions.filter(p => p.isActive && (p.title.toLowerCase().includes('ship') || p.code.toLowerCase().includes('ship') || p.code.toLowerCase().includes('free'))).map(promotion => (
               <div
                 key={promotion.id}
                 onClick={() => handleCopyCode(promotion.code)}

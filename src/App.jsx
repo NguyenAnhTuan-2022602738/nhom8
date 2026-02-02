@@ -86,20 +86,35 @@ function App() {
     localStorage.setItem('user', JSON.stringify(newUserData));
   };
 
+  const [categories, setCategories] = useState([]);
+  
   // Load Data from MongoDB - OPTIMIZED: Single call for homeLayoutV2 + parallel for products
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Load song song cả products và homeLayoutV2
-        const [dbProducts, savedData] = await Promise.all([
+        // Load song song cả products, categories và homeLayoutV2
+        const [dbProducts, savedData, dbCategories] = await Promise.all([
           api.getProducts(),
-          api.getSetting('homeLayoutV2')
+          api.getSetting('homeLayoutV2'),
+          api.getSetting('categories')
         ]);
         
         // Set products
         if (dbProducts && dbProducts.length > 0) {
           setProducts(dbProducts);
+        }
+
+        // Set categories
+        if (dbCategories && Array.isArray(dbCategories)) {
+          setCategories(dbCategories);
+        } else {
+           // Default categories if none exist
+           setCategories([
+             { id: 'cat_1', name: 'Hoa Tình Yêu' },
+             { id: 'cat_2', name: 'Hoa Sinh Nhật' },
+             { id: 'cat_3', name: 'Hoa Khai Trương' }
+           ]);
         }
         
         // Extract globalSettings từ homeLayoutV2
@@ -204,9 +219,10 @@ function App() {
               onOpenModal={handleOpenModal} 
               onAddToCart={addToCart} 
               isAdmin={isAdmin} 
+              categories={categories}
             />
           } />
-          <Route path="/shop" element={<Shop products={products} settings={settings} onOpenModal={handleOpenModal} onAddToCart={addToCart} />} />
+          <Route path="/shop" element={<Shop products={products} settings={settings} onOpenModal={handleOpenModal} onAddToCart={addToCart} categories={categories} />} />
           <Route path="/about" element={<About settings={settings} isAdmin={isAdmin} />} />
           <Route path="/contact" element={<Contact settings={settings} />} />
           <Route path="/cart" element={
@@ -221,14 +237,14 @@ function App() {
           } />
           <Route path="/login" element={
             user ? (
-              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
+              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} categories={categories} setCategories={setCategories} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
             ) : (
               <Login onLogin={handleLogin} settings={settings} />
             )
           } />
           <Route path="/register" element={
             user ? (
-              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
+              user.role === 'admin' ? <Admin products={products} setProducts={setProducts} settings={settings} categories={categories} setCategories={setCategories} /> : <Profile settings={settings} user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
             ) : (
               <Register settings={settings} onLogin={handleLogin} />
             )
@@ -250,6 +266,8 @@ function App() {
                 products={products} 
                 setProducts={setProducts} 
                 settings={settings}
+                categories={categories}
+                setCategories={setCategories}
               />
             ) : (
               <Login onLogin={handleLogin} settings={settings} />

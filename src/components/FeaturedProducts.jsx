@@ -61,8 +61,7 @@ const FeaturedProducts = ({ products, setProducts, settings, onOpenModal, onAddT
         id: newId,
         name: "Sản phẩm mới",
         price: 0,
-        image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=300",
-        images: ["https://images.unsplash.com/photo-1563245372-f21724e3856d?w=300"],
+        images: [],  // Empty - user will upload
         description: "Mô tả sản phẩm mới...",
         category: "Hoa Tươi"
     };

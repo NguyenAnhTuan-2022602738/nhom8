@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star, Upload, X } from 'lucide-react';
+import { uploadImage } from '../utils/cloudinary';
 
 const ReviewForm = ({ onSubmit, settings }) => {
   const [formData, setFormData] = useState({
@@ -10,20 +11,31 @@ const ReviewForm = ({ onSubmit, settings }) => {
   });
 
   const [previewImages, setPreviewImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, reader.result]
-        }));
-        setPreviewImages(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    if (files.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      
+      // Upload all files to Cloudinary
+      const uploadPromises = files.map(file => uploadImage(file));
+      const imageUrls = await Promise.all(uploadPromises);
+      
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...imageUrls]
+      }));
+      setPreviewImages(prev => [...prev, ...imageUrls]);
+      e.target.value = '';
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Lỗi khi tải ảnh: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleImageUrlAdd = () => {

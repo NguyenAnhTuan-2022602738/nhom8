@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
-import { X, ShoppingBag, Minus, Plus, Edit, Save } from 'lucide-react';
+import { X, Minus, Plus, ShoppingCart, ShoppingBag, Edit, Save } from 'lucide-react';
 import { api } from '../services/api';
+import { uploadImage } from '../utils/cloudinary';
 
 const ProductModal = ({ product, isOpen, onClose, onAddToCart, settings, isAdmin, onUpdateProduct }) => {
-  // Handle isOpen prop if passed (older usage might not have it, but Home.jsx likely does)
-  // Actually Home.jsx renders it conditionally.
-  // Wait, in previous step checking view_file, ProductModal takes (product, onClose, onAddToCart, settings). isOpen is not used?
-  // Let's stick to existing signature but add isAdmin and onUpdateProduct.
   if (!product) return null;
 
   const [quantity, setQuantity] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ ...product, images: product.images || [] });
-  const [selectedImage, setSelectedImage] = useState(product.image); 
+  const [editData, setEditData] = useState({ 
+    ...product, 
+    images: product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
+  });
+  
+  // Ensure images array exists
+  const images = editData.images && editData.images.length > 0 ? editData.images : (editData.image ? [editData.image] : []);
+  
+  const [selectedImage, setSelectedImage] = useState(images[0] || product.image);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef(null); 
   const primaryColor = settings?.primaryColor || '#c9184a';
 
-  // Ensure images array exists
-  const images = editData.images && editData.images.length > 0 ? editData.images : [editData.image];
-
   // Sync selected image if not in new images list
-  if (images.length > 0 && !images.includes(selectedImage)) {
-      if (images[0]) setSelectedImage(images[0]);
-  }
+  React.useEffect(() => {
+    if (images.length > 0 && !images.includes(selectedImage)) {
+      setSelectedImage(images[0]);
+    }
+  }, [images]);
 
   const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
@@ -39,11 +44,8 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart, settings, isAdmin
   const handleSave = async () => {
     try {
         const updatedProduct = { 
-            ...editData, 
-            image: images[0] || editData.image, // Ensure main image is synced
-            // If user added images via text in Admin but here we use editData
+            ...editData
         };
-        // Call API
         await api.updateProduct(product.id, updatedProduct);
         if (onUpdateProduct) onUpdateProduct(updatedProduct);
         
@@ -56,11 +58,27 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart, settings, isAdmin
   };
 
   const handleAddImage = () => {
-      const url = prompt("Nhập URL ảnh mới:");
-      if (url) {
-          const newImages = [...images, url];
+      if (fileInputRef.current) {
+          fileInputRef.current.click();
+      }
+  };
+
+  const handleFileChange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+          setIsUploading(true);
+          const imageUrl = await uploadImage(file);
+          const newImages = [...images, imageUrl];
           setEditData(prev => ({ ...prev, images: newImages }));
-          setSelectedImage(url);
+          setSelectedImage(imageUrl);
+          e.target.value = '';
+      } catch (error) {
+          console.error('Upload error:', error);
+          alert('Lỗi khi tải ảnh lên: ' + error.message);
+      } finally {
+          setIsUploading(false);
       }
   };
 
@@ -93,33 +111,45 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart, settings, isAdmin
         
         <div className="modal-grid">
           <div className="modal-gallery">
-             <div className="main-image-container" style={{ position: 'relative' }}>
-                <img src={selectedImage || images[0]} alt={product.name} className="main-image" />
-             </div>
-             <div className="thumbnail-list">
-                {images.map((img, index) => (
-                  <div 
-                    key={index} 
-                    className={`thumbnail-item ${selectedImage === img ? 'active' : ''}`}
-                    onClick={() => setSelectedImage(img)}
-                    style={{ borderColor: selectedImage === img ? primaryColor : 'transparent', position: 'relative' }}
-                  >
-                    <img src={img} alt={`${product.name} ${index}`} />
-                    {isEditing && (
-                        <button onClick={(e) => handleRemoveImage(e, index)} style={{ position: 'absolute', top: -5, right: -5, background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '15px', height: '15px', fontSize: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>x</button>
-                    )}
-                  </div>
-                ))}
-                 {isEditing && (
-                    <div 
-                        className="thumbnail-item"
-                        onClick={handleAddImage}
-                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px dashed #ccc', cursor: 'pointer' }}
+            <div className="main-image-container">
+              <img src={selectedImage || images[0]} alt={product.name} className="main-image" />
+            </div>
+            <div className="thumbnail-list">
+              {images.map((img, index) => (
+                <div 
+                  key={index} 
+                  className={`thumbnail-item ${selectedImage === img ? 'active' : ''}`}
+                  onClick={() => setSelectedImage(img)}
+                  style={{ borderColor: selectedImage === img ? primaryColor : 'transparent', position: 'relative' }}
+                >
+                  <img src={img} alt={`${product.name} ${index}`} />
+                  {isEditing && (
+                    <button 
+                      onClick={(e) => handleRemoveImage(e, index)} 
+                      style={{ position: 'absolute', top: -5, right: -5, background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '15px', height: '15px', fontSize: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
                     >
-                        <Plus size={20} color="#ccc" />
-                    </div>
-                )}
-             </div>
+                      x
+                    </button>
+                  )}
+                </div>
+              ))}
+              {isEditing && (
+                <div 
+                  className="thumbnail-item"
+                  onClick={handleAddImage}
+                  style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px dashed #ccc', cursor: 'pointer' }}
+                >
+                  <Plus size={20} color="#ccc" />
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
           </div>
           
           <div className="modal-info">
@@ -183,9 +213,9 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart, settings, isAdmin
                 <p>✓ Tặng kèm thiệp chúc mừng</p>
                 <p>✓ Cam kết hoa tươi 3 ngày</p>
                 </div>
-                </>
-            )}
-          </div>
+                </>)}
+
+</div>
         </div>
       </div>
     </div>

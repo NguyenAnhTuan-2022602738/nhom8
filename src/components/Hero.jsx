@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { uploadImage } from '../utils/cloudinary';
 
 const Hero = ({ settings, isEditing, data, onUpdate }) => {
   const fileInputRef = useRef(null);
@@ -11,6 +12,7 @@ const Hero = ({ settings, isEditing, data, onUpdate }) => {
 
   const images = data.images && data.images.length > 0 ? data.images : [data.bgImage || "https://images.unsplash.com/photo-1490750967868-58cb75069ed6?q=80&w=2000&auto=format&fit=crop"];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const currentData = {
     title: data.title || "Mùa Yêu Thương",
@@ -33,18 +35,22 @@ const Hero = ({ settings, isEditing, data, onUpdate }) => {
   const handlePrev = () => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
 
   // Handle uploading/adding image
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // Add new image to array
-        const newImages = [...images, reader.result];
-        // Also update bgImage for compatibility with older saves
-        onUpdate({ ...data, images: newImages, bgImage: newImages[0] });
-        setCurrentImageIndex(newImages.length - 1); // Jump to new image
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const imageUrl = await uploadImage(file);
+      const newImages = [...images, imageUrl];
+      onUpdate({ ...data, images: newImages, bgImage: newImages[0] });
+      setCurrentImageIndex(newImages.length - 1);
+      e.target.value = '';
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Lỗi khi tải ảnh: ' + error.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 

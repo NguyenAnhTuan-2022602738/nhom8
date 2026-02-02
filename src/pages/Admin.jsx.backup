@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp, BookOpen, CheckCircle, Circle, ArrowRight, MessageCircle, Upload, Trash2 } from 'lucide-react';
+import { Package, ShoppingBag, RefreshCw, Eye, ChevronDown, ChevronUp, BookOpen, CheckCircle, Circle, ArrowRight, MessageCircle, Upload } from 'lucide-react';
 import AdminChatManagement from '../components/AdminChatManagement';
 import { uploadImage, uploadMultipleImages } from '../utils/cloudinary';
 
@@ -13,23 +13,17 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Đã hủy', color: '#dc3545', next: null }
 };
 
-const Admin = ({ products, settings, setProducts, categories, setCategories }) => {
-  const [activeTab, setActiveTab] = useState('products'); // products | orders | chats | categories
+const Admin = ({ products, settings, setProducts }) => {
+  const [activeTab, setActiveTab] = useState('products'); // products | orders | chats
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '', image: '', images: '', description: '', category: '' });
+  const [formData, setFormData] = useState({ name: '', price: '', image: '', images: '', description: '' });
   const [isUploading, setIsUploading] = useState(false);
   
-  // Category state
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isSavingCategory, setIsSavingCategory] = useState(false);
-
   // Orders state
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedOrder, setExpandedOrder] = useState(null);
-  
-  // ... (keep useEffect and other handlers same)
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -78,41 +72,12 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
     cancelled: orders.filter(o => o.status === 'cancelled').length
   };
 
-  // Category Handlers
-  const handleAddCategory = async (e) => {
-      e.preventDefault();
-      if (!newCategoryName.trim()) return;
-      
-      setIsSavingCategory(true);
-      try {
-          const newCat = { id: `cat_${Date.now()}`, name: newCategoryName.trim() };
-          const updatedCategories = [...categories, newCat];
-          setCategories(updatedCategories);
-          await api.saveSetting('categories', updatedCategories);
-          setNewCategoryName('');
-      } catch (e) {
-          console.error("Add category failed", e);
-          alert('Lỗi khi thêm danh mục');
-      } finally {
-          setIsSavingCategory(false);
-      }
-  };
-
-  const handleDeleteCategory = async (id) => {
-      if (confirm('Bạn muốn xóa danh mục này?')) {
-          const updatedCategories = categories.filter(c => c.id !== id);
-          setCategories(updatedCategories);
-          await api.saveSetting('categories', updatedCategories);
-      }
-  };
-
   // Product handlers
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
         ...product,
-        images: product.images ? product.images.join('\n') : '',
-        category: product.category || ''
+        images: product.images ? product.images.join('\n') : ''
     });
   };
 
@@ -151,44 +116,7 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
           await api.createProduct(newProduct);
       } catch (e) { console.error("Create failed", e); }
     }
-    setFormData({ name: '', price: '', image: '', images: '', description: '', category: '' });
-  };
-
-  // Cloudinary upload handlers
-  const handleUploadMainImage = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      setIsUploading(true);
-      const imageUrl = await uploadImage(file);
-      setFormData({...formData, image: imageUrl});
-      e.target.value = '';
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Lỗi khi tải ảnh: ' + error.message);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleUploadGallery = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    
-    try {
-      setIsUploading(true);
-      const imageUrls = await uploadMultipleImages(files);
-      const currentImages = formData.images ? formData.images.split('\n').filter(s => s.trim()) : [];
-      const newImages = [...currentImages, ...imageUrls].join('\n');
-      setFormData({...formData, images: newImages});
-      e.target.value = '';
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Lỗi khi tải ảnh: ' + error.message);
-    } finally {
-      setIsUploading(false);
-    }
+    setFormData({ name: '', price: '', image: '', images: '', description: '' });
   };
 
   return (
@@ -198,7 +126,7 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ color: settings.primaryColor, marginBottom: '1rem', textAlign: 'center' }}>⚙️ Trang Quản Trị</h2>
         
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1rem' }}>
           <button
             onClick={() => setActiveTab('products')}
             style={{
@@ -214,27 +142,8 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
               fontWeight: '600'
             }}
           >
-            <ShoppingBag size={18} /> Sản Phẩm
+            <ShoppingBag size={18} /> Sản Phẩm ({products.length})
           </button>
-          
-          <button
-            onClick={() => setActiveTab('categories')}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '25px',
-              border: activeTab === 'categories' ? 'none' : '1px solid #ddd',
-              background: activeTab === 'categories' ? settings.primaryColor : 'white',
-              color: activeTab === 'categories' ? 'white' : '#666',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '600'
-            }}
-          >
-             🏷️ Danh mục
-          </button>
-
           <button
             onClick={() => setActiveTab('orders')}
             style={{
@@ -342,43 +251,6 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
           </Link>
       </div>
 
-      {/* Categories Tab */}
-        {activeTab === 'categories' && (
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <div className="glass-card" style={{ padding: '2rem' }}>
-                    <h3 style={{ textAlign: 'center', color: settings.primaryColor, marginBottom: '1.5rem' }}>🏷️ Quản Lý Danh Mục</h3>
-                    
-                    <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
-                        <input 
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder="Nhập tên danh mục mới..."
-                            style={{ flex: 1, padding: '10px' }}
-                            required
-                        />
-                        <button type="submit" className="btn-primary" disabled={isSavingCategory} style={{ background: settings.primaryColor }}>
-                            {isSavingCategory ? 'Đang lưu...' : 'Thêm Danh Mục'}
-                        </button>
-                    </form>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {categories.map(cat => (
-                            <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                                <span style={{ fontWeight: '500' }}>{cat.name}</span>
-                                <button 
-                                    onClick={() => handleDeleteCategory(cat.id)}
-                                    style={{ border: 'none', background: '#ffebee', color: '#d32f2f', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                >
-                                    <Trash2 size={16} /> Xóa
-                                </button>
-                            </div>
-                        ))}
-                        {categories.length === 0 && <p style={{ textAlign: 'center', color: '#999' }}>Chưa có danh mục nào.</p>}
-                    </div>
-                </div>
-            </div>
-        )}
-
       {/* Products Tab */}
       {activeTab === 'products' && (
         <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
@@ -391,82 +263,16 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
                 <label>Tên loài hoa</label>
                 <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="Ví dụ: Hoa Hồng..." />
               </div>
-              
-                <div className="form-group">
-                    <label>Danh mục</label>
-                    <select 
-                        value={formData.category} 
-                        onChange={e => setFormData({...formData, category: e.target.value})}
-                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                    >
-                        <option value="">-- Chọn danh mục --</option>
-                        {categories.map(cat => (
-                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                        ))}
-                    </select>
-                </div>
-
               <div className="form-group">
                 <label>Giá bán (VNĐ)</label>
                 <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required placeholder="500000" />
               </div>
               <div className="form-group">
-                <label>Ảnh Chính</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input 
-                    value={formData.image} 
-                    onChange={e => setFormData({...formData, image: e.target.value})} 
-                    placeholder="Nhập URL hoặc upload ảnh" 
-                    style={{ flex: 1 }}
-                  />
-                  <label style={{ 
-                    padding: '10px 20px', 
-                    background: isUploading ? '#ccc' : settings.primaryColor, 
-                    color: 'white', 
-                    borderRadius: '8px', 
-                    cursor: isUploading ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                  }}>
-                    <Upload size={16} />
-                    {isUploading ? 'Đang tải...' : 'Upload'}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleUploadMainImage} 
-                      style={{ display: 'none' }}
-                      disabled={isUploading}
-                    />
-                  </label>
-                </div>
+                <label>Ảnh Chính (URL)</label>
+                <input value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} required placeholder="https://example.com/flower.jpg" />
               </div>
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                  <label style={{ margin: 0 }}>Album Ảnh (Mỗi dòng 1 link)</label>
-                  <label style={{ 
-                    padding: '6px 12px', 
-                    background: isUploading ? '#ccc' : settings.primaryColor, 
-                    color: 'white', 
-                    borderRadius: '6px', 
-                    cursor: isUploading ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '0.85rem'
-                  }}>
-                    <Upload size={14} />
-                    {isUploading ? 'Đang tải...' : 'Upload Nhiều'}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      multiple
-                      onChange={handleUploadGallery} 
-                      style={{ display: 'none' }}
-                      disabled={isUploading}
-                    />
-                  </label>
-                </div>
+                <label>Album Ảnh (Mỗi dòng 1 link)</label>
                 <textarea 
                   value={formData.images} 
                   onChange={e => setFormData({...formData, images: e.target.value})} 
@@ -932,3 +738,4 @@ const Admin = ({ products, settings, setProducts, categories, setCategories }) =
 };
 
 export default Admin;
+

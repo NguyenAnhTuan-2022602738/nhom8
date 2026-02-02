@@ -1,7 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Camera } from 'lucide-react';
+import { uploadImage } from '../utils/cloudinary';
 
 const Testimonials = ({ isEditing, data, onUpdate }) => {
+  const [uploadingIndex, setUploadingIndex] = useState(null);
   const currentData = {
     title: data.title || "Khách Hàng Nói Gì? 💬",
     items: data.items || [
@@ -20,16 +22,22 @@ const Testimonials = ({ isEditing, data, onUpdate }) => {
     onUpdate({ ...data, items: newItems });
   };
 
-  const handleImageUpload = (index, e) => {
+  const handleImageUpload = async (index, e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-         const newItems = [...currentData.items];
-         newItems[index] = { ...newItems[index], avatar: reader.result };
-         onUpdate({ ...data, items: newItems });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    try {
+      setUploadingIndex(index);
+      const imageUrl = await uploadImage(file);
+      const newItems = [...currentData.items];
+      newItems[index] = { ...newItems[index], avatar: imageUrl };
+      onUpdate({ ...data, items: newItems });
+      e.target.value = '';
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Lỗi khi tải ảnh: ' + error.message);
+    } finally {
+      setUploadingIndex(null);
     }
   };
 

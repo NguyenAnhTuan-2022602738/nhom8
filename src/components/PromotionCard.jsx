@@ -43,14 +43,24 @@ const PromotionCard = ({ promotion, settings }) => {
         borderRadius: '50%'
       }} />
 
+      <style>
+        {`
+          @keyframes blink {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+        `}
+      </style>
+
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
+            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
               {promotion.title}
             </h3>
-            <p style={{ margin: '5px 0 0 0', opacity: 0.9, fontSize: '0.9rem' }}>
-              Giảm {discountText}
+            <p style={{ margin: '5px 0 0 0', opacity: 1, fontSize: '0.9rem', color: '#fff', fontWeight: '500' }}>
+              Giảm <span style={{ fontWeight: 'bold', color: '#ffeb3b', animation: 'blink 1.5s infinite ease-in-out', display: 'inline-block' }}>{discountText}</span>
             </p>
           </div>
           <Gift size={40} style={{ opacity: 0.8 }} />

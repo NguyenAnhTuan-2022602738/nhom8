@@ -41,6 +41,74 @@ const Cart = ({ settings, cartItems, user, onUpdateQuantity, onRemoveItem, onCle
     setCustomerInfo(prev => ({ ...prev, [name]: value }));
   };
 
+  const [voucherCode, setVoucherCode] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [voucherError, setVoucherError] = useState('');
+
+  const handleApplyVoucher = async () => {
+    setVoucherError('');
+    if (!voucherCode.trim()) return;
+
+    // 1. Check cooldown (48h)
+    const lastUsedKey = `voucher_used_${voucherCode.toUpperCase()}`;
+    const lastUsedTime = localStorage.getItem(lastUsedKey);
+    if (lastUsedTime) {
+        const hoursDiff = (Date.now() - parseInt(lastUsedTime)) / (1000 * 60 * 60);
+        if (hoursDiff < 48) {
+            const hoursLeft = Math.ceil(48 - hoursDiff);
+            setVoucherError(`Mã này đang trong thời gian chờ. Thử lại sau ${hoursLeft} giờ.`);
+            return;
+        }
+    }
+
+    try {
+        // Fetch promotions to validate
+        const promotions = await api.getSetting('promotionsData') || [];
+        const promo = promotions.find(p => p.code.toUpperCase() === voucherCode.toUpperCase() && p.isActive);
+
+        if (!promo) {
+            setVoucherError('Mã giảm giá không tồn tại hoặc đã hết hạn.');
+            return;
+        }
+
+        // Validate conditions
+        const now = new Date();
+        if (new Date(promo.validFrom) > now || new Date(promo.validUntil) < now) {
+            setVoucherError('Mã giảm giá chưa đến hoặc đã quá hạn sử dụng.');
+            return;
+        }
+
+        if (totalAmount < promo.minPurchase) {
+            setVoucherError(`Đơn hàng tối thiểu ${promo.minPurchase.toLocaleString('vi-VN')}đ để sử dụng mã này.`);
+            return;
+        }
+
+        // Calculate discount
+        let discount = 0;
+        if (promo.type === 'percentage') {
+            discount = (totalAmount * promo.discount) / 100;
+            if (promo.maxDiscount) discount = Math.min(discount, promo.maxDiscount);
+        } else {
+            discount = promo.discount;
+        }
+
+        setAppliedVoucher({ ...promo, discountAmount: discount });
+        setVoucherCode(''); 
+        alert(`Áp dụng mã ${promo.code} thành công! Giảm ${discount.toLocaleString('vi-VN')}đ`);
+
+    } catch (e) {
+        console.error("Voucher check failed", e);
+        setVoucherError('Lỗi khi kiểm tra mã giảm giá.');
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+      setAppliedVoucher(null);
+      setVoucherCode('');
+  };
+
+  const finalAmount = appliedVoucher ? Math.max(0, totalAmount - appliedVoucher.discountAmount) : totalAmount;
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -55,13 +123,21 @@ const Cart = ({ settings, cartItems, user, onUpdateQuantity, onRemoveItem, onCle
           quantity: item.quantity,
           image: item.image
         })),
-        totalAmount,
+        totalAmount: finalAmount, // Use discounted amount
+        subTotal: totalAmount,
+        discount: appliedVoucher ? appliedVoucher.discountAmount : 0,
+        voucherCode: appliedVoucher ? appliedVoucher.code : null,
         status: 'pending',
         createdAt: new Date().toISOString()
       };
 
       const result = await api.createOrder(orderData);
       
+      // Save cooldown to localStorage on success
+      if (appliedVoucher) {
+          localStorage.setItem(`voucher_used_${appliedVoucher.code}`, Date.now().toString());
+      }
+
       setOrderInfo({
         orderId: result._id || result.id || Date.now().toString(),
         ...orderData
@@ -75,7 +151,10 @@ const Cart = ({ settings, cartItems, user, onUpdateQuantity, onRemoveItem, onCle
         orderId: 'LOCAL-' + Date.now(),
         customer: customerInfo,
         items: cartItems,
-        totalAmount,
+        totalAmount: finalAmount,
+        subTotal: totalAmount,
+        discount: appliedVoucher ? appliedVoucher.discountAmount : 0,
+        voucherCode: appliedVoucher ? appliedVoucher.code : null,
         status: 'pending',
         createdAt: new Date().toISOString()
       };
@@ -84,6 +163,11 @@ const Cart = ({ settings, cartItems, user, onUpdateQuantity, onRemoveItem, onCle
       existingOrders.push(fallbackOrder);
       localStorage.setItem('orders', JSON.stringify(existingOrders));
       
+      // Save cooldown logic for offline/fallback too
+      if (appliedVoucher) {
+        localStorage.setItem(`voucher_used_${appliedVoucher.code}`, Date.now().toString());
+      }
+
       setOrderInfo(fallbackOrder);
       setOrderSuccess(true);
       onClearCart();
@@ -454,9 +538,55 @@ const Cart = ({ settings, cartItems, user, onUpdateQuantity, onRemoveItem, onCle
                     <span>{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</span>
                   </div>
                 ))}
-                <div style={{ borderTop: '1px dashed #ddd', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                  <span>Tổng thanh toán:</span>
-                  <span style={{ color: settings.primaryColor, fontSize: '1.1rem' }}>{totalAmount.toLocaleString('vi-VN')} ₫</span>
+
+                {/* Voucher Input */}
+                <div style={{ padding: '10px 0', borderTop: '1px dashed #ddd', marginTop: '10px' }}>
+                    {appliedVoucher ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#e6f7ff', padding: '8px', borderRadius: '6px', border: '1px solid #91d5ff' }}>
+                            <div>
+                                <strong style={{ color: '#1890ff' }}>{appliedVoucher.code}</strong>
+                                <div style={{ fontSize: '0.8rem', color: '#666' }}>- {appliedVoucher.discountAmount.toLocaleString('vi-VN')}đ</div>
+                            </div>
+                            <button type="button" onClick={handleRemoveVoucher} style={{ border: 'none', background: 'transparent', color: '#ff4d4f', cursor: 'pointer' }}>
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                            <input
+                                type="text"
+                                value={voucherCode}
+                                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                placeholder="Mã giảm giá"
+                                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleApplyVoucher}
+                                style={{ background: settings.primaryColor, color: 'white', border: 'none', borderRadius: '6px', padding: '0 12px', cursor: 'pointer', fontSize: '0.9rem' }}
+                            >
+                                Áp dụng
+                            </button>
+                        </div>
+                    )}
+                    {voucherError && <div style={{ color: '#ff4d4f', fontSize: '0.8rem', marginTop: '5px' }}>{voucherError}</div>}
+                </div>
+
+                <div style={{ borderTop: '1px dashed #ddd', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem' }}>
+                      <span>Tạm tính:</span>
+                      <span>{totalAmount.toLocaleString('vi-VN')} ₫</span>
+                  </div>
+                  {appliedVoucher && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem', color: '#28a745' }}>
+                          <span>Giảm giá:</span>
+                          <span>- {appliedVoucher.discountAmount.toLocaleString('vi-VN')} ₫</span>
+                      </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                    <span>Tổng thanh toán:</span>
+                    <span style={{ color: settings.primaryColor, fontSize: '1.1rem' }}>{finalAmount.toLocaleString('vi-VN')} ₫</span>
+                  </div>
                 </div>
               </div>
 
