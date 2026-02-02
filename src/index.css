@@ -295,7 +295,7 @@ h1, h2, h3 {
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 2000;
   border-bottom: 1px solid var(--glass-border);
 }
 
