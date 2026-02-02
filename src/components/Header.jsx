@@ -83,7 +83,7 @@ const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
                   boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   padding: '8px 0',
                   minWidth: '180px',
-                  zIndex: 1000,
+                  zIndex: 3000,
                   marginTop: '5px'
                 }}>
                   <NavLink 
@@ -219,7 +219,7 @@ const Header = ({ settings, cartCount, user, isAdmin, onLogout }) => {
           right: 0,
           background: 'white',
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          zIndex: 99,
+          zIndex: 3000,
           padding: '1rem',
           display: 'flex',
           flexDirection: 'column',
