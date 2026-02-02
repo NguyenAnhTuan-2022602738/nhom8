@@ -7,6 +7,7 @@ const Shop = ({ products, settings, onOpenModal, onAddToCart, categories = [] })
   const [searchTerm, setSearchTerm] = React.useState('');
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(6); // Default 6 items
+  const [showMobileSidebar, setShowMobileSidebar] = React.useState(false); // Mobile sidebar toggle
 
   // Reset pagination when filter changes
   React.useEffect(() => {
@@ -37,10 +38,53 @@ const Shop = ({ products, settings, onOpenModal, onAddToCart, categories = [] })
         <p style={{ color: '#666', marginTop: '0.5rem' }}>Khám phá những mẫu hoa tươi thắm nhất dành cho bạn</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '2rem', padding: '0 20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '2rem', padding: '0 20px', flexWrap: 'wrap', flexDirection: 'row', position: 'relative' }}>
         
+        {/* Mobile Filter Toggle */}
+        <div style={{ width: '100%', display: 'none', zIndex: 101, position: 'relative' }} className="mobile-filter-toggle">
+            <button 
+                onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: '1px solid #ddd',
+                    background: 'white',
+                    color: settings.primaryColor,
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    marginBottom: '10px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                }}
+            >
+                <span>{showMobileSidebar ? '🔼 Ẩn bộ lọc' : '🔍 Bộ lọc & Danh mục'}</span>
+            </button>
+            <style>{`
+                @media (max-width: 768px) {
+                    .mobile-filter-toggle { display: block !important; }
+                    .sidebar-container { 
+                        display: ${showMobileSidebar ? 'block' : 'none'} !important; 
+                        position: absolute !important;
+                        top: 60px;
+                        left: 20px;
+                        right: 20px;
+                        z-index: 1000;
+                        width: auto !important;
+                    }
+                    .sidebar-container .glass-card {
+                        position: relative !important;
+                        top: 0 !important;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+                    }
+                }
+            `}</style>
+        </div>
+
         {/* Left Sidebar - Categories & Search */}
-        <div style={{ flex: '0 0 250px', minWidth: '200px', width: '100%' }}>
+        <div className="sidebar-container" style={{ flex: '0 0 250px', minWidth: '200px' }}>
             <div className="glass-card" style={{ padding: '1.5rem', position: 'sticky', top: '100px' }}>
                 
                 {/* Search Input */}

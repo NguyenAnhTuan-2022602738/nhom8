@@ -789,15 +789,31 @@ h1, h2, h3 {
   border: 1px solid #ddd;
 }
 
-.drag-handle {
-  cursor: grab;
-  padding: 5px;
-  color: #666;
-  border-right: 1px solid #eee;
-  padding-right: 10px;
-  display: flex;
-  align-items: center;
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem; /* Smaller gap */
+    padding: 1rem; /* Smaller padding */
+  }
+
+  .product-image-container {
+    height: 180px; /* Smaller image height for 2-column layout */
+  }
+
+  .product-title {
+    font-size: 1.4rem; /* Smaller title */
+  }
+
+  .product-info {
+    padding: 1rem; /* Compact padding */
+  }
+
+  .app-container {
+     padding-bottom: 20px;
+  }
 }
+
 
 .drag-handle:active {
   cursor: grabbing;
